@@ -4,9 +4,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.mybatis.generator.plugins.interfaze.EnumInterface;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * @author Administrator
  * @date 2019/7/10 18:11
@@ -27,15 +24,4 @@ public enum LombokEnum implements EnumInterface {
     private final String annotation;
     private final String pkg;
 
-    private final static Map<String, String> lombokEnumMap;
-
-    static {
-        LombokEnum[] enums = values();
-        lombokEnumMap = new HashMap<>(enums.length);
-        for (LombokEnum lombokEnum : enums)
-            lombokEnumMap.put(lombokEnum.annotation, lombokEnum.pkg);
-    }
-    public static Map<String, String> getLombokEnumMap(){
-        return lombokEnumMap;
-    }
 }

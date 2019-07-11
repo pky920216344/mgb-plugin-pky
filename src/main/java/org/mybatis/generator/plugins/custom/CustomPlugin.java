@@ -4,16 +4,17 @@ import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
 import org.mybatis.generator.api.Plugin;
 import org.mybatis.generator.api.PluginAdapter;
-import org.mybatis.generator.api.dom.java.Field;
-import org.mybatis.generator.api.dom.java.Interface;
-import org.mybatis.generator.api.dom.java.Method;
-import org.mybatis.generator.api.dom.java.TopLevelClass;
+import org.mybatis.generator.api.dom.java.*;
 import org.mybatis.generator.api.dom.xml.Document;
+import org.mybatis.generator.codegen.mybatis3.ListUtilities;
 import org.mybatis.generator.config.JavaClientGeneratorConfiguration;
+import org.mybatis.generator.internal.util.JavaBeansUtil;
 import org.mybatis.generator.plugins.enums.LombokEnum;
 import org.mybatis.generator.plugins.interfaze.EnumInterface;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 
@@ -24,7 +25,14 @@ public class CustomPlugin extends PluginAdapter {
     private String needSwagger;
     private String needInsertBatch;
     private String needInsertMulti;
+    private Map<String, String> lombokEnumMap;
 
+    public CustomPlugin() {
+        LombokEnum[] enums = LombokEnum.values();
+        lombokEnumMap = new HashMap<>(enums.length);
+        for (LombokEnum lombokEnum : enums)
+            lombokEnumMap.put(lombokEnum.getAnnotation(), lombokEnum.getPkg());
+    }
 
     @Override
     public void setProperties(Properties properties) {
@@ -60,7 +68,44 @@ public class CustomPlugin extends PluginAdapter {
     }
 
     private void addInsertBatch(Interface interfaze, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        if (enableInsertBatch()) {
+            switch (introspectedTable.getTargetRuntime()) {
+                case MYBATIS3:
+                    break;
+                case MYBATIS3_DSQL:
+                    Method method = new Method();
+                    method.setDefault(true);
+                    method.setReturnType(new FullyQualifiedJavaType("long"));
+                    method.setName("insertBatch");
+                    //参数
+                    FullyQualifiedJavaType iterableType = new FullyQualifiedJavaType("java.util.Collection");
+                    iterableType.addTypeArgument(introspectedTable.getRules().calculateAllFieldsClass());
+                    method.addParameter(new Parameter(iterableType, "collection"));
+                    interfaze.addImportedType(iterableType);
 
+                    FullyQualifiedJavaType arrayListType = new FullyQualifiedJavaType("java.util.ArrayList");
+                    interfaze.addImportedType(arrayListType);
+
+                    method.addBodyLine("return SqlBuilder.insert(new ArrayList<>(collection)).into(" + ")");
+                    String tableFieldName = JavaBeansUtil.getValidPropertyName(introspectedTable.getFullyQualifiedTable().getDomainObjectName());
+                    List<IntrospectedColumn> columns = ListUtilities.removeIdentityAndGeneratedAlwaysColumns(introspectedTable.getAllColumns());
+                    for (IntrospectedColumn column : columns) {
+                        String fieldName = column.getJavaProperty();
+                        if (fieldName.equals(tableFieldName)) {
+                            fieldName = tableFieldName + "." + fieldName;
+                        }
+                        method.addBodyLine("        .map(" + fieldName
+                                + ").toProperty(\"" + column.getJavaProperty()
+                                + "\")");
+                    }
+                    method.addBodyLine("        .build().render(RenderingStrategy.MYBATIS3)");
+                    method.addBodyLine("        .insertStatements().stream().map(this::insert).count();");
+                    interfaze.addMethod(method);
+                    break;
+                default:
+                    //do nothing
+            }
+        }
     }
 
 
@@ -229,7 +274,7 @@ public class CustomPlugin extends PluginAdapter {
             if (null == lombokPackage || lombokPackage.length() == 0) {
                 for (String annotation : customLombokAnnotations) {
                     String pkg;
-                    if (null == (pkg = LombokEnum.getLombokEnumMap().get(annotation))) {
+                    if (null == (pkg = lombokEnumMap.get(annotation))) {
                         topLevelClass.getAnnotations().add(annotation);
                         topLevelClass.addImportedType("lombok." + annotation.substring(1));
                     } else {
