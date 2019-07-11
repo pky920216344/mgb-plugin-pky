@@ -12,10 +12,7 @@ import org.mybatis.generator.internal.util.JavaBeansUtil;
 import org.mybatis.generator.plugins.enums.LombokEnum;
 import org.mybatis.generator.plugins.interfaze.EnumInterface;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 
 public class CustomPlugin extends PluginAdapter {
@@ -86,8 +83,8 @@ public class CustomPlugin extends PluginAdapter {
                     FullyQualifiedJavaType arrayListType = new FullyQualifiedJavaType("java.util.ArrayList");
                     interfaze.addImportedType(arrayListType);
 
-                    method.addBodyLine("return SqlBuilder.insert(new ArrayList<>(collection)).into(" + ")");
                     String tableFieldName = JavaBeansUtil.getValidPropertyName(introspectedTable.getFullyQualifiedTable().getDomainObjectName());
+                    method.addBodyLine("return SqlBuilder.insert(new ArrayList<>(collection)).into(" + tableFieldName + ")");
                     List<IntrospectedColumn> columns = ListUtilities.removeIdentityAndGeneratedAlwaysColumns(introspectedTable.getAllColumns());
                     for (IntrospectedColumn column : columns) {
                         String fieldName = column.getJavaProperty();
@@ -302,7 +299,9 @@ public class CustomPlugin extends PluginAdapter {
     private void addSwaggerToTopLevelClass(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         //Swagger
         if (enableSwagger()) {
-            topLevelClass.addImportedType("io.swagger.annotations.ApiModel");
+            Set<FullyQualifiedJavaType> set = new HashSet<>();
+            set.add(new FullyQualifiedJavaType("io.swagger.annotations.ApiModel"));
+            topLevelClass.addImportedTypes(set);
             topLevelClass.getAnnotations().add("@ApiModel(description = \"" + introspectedTable.getFullyQualifiedTable().getDomainObjectName() + "\")");
         }
     }
