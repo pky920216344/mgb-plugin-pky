@@ -56,6 +56,6 @@
                 </executions>
             </plugin>
         </plugins>
-        <finalName>mbg-plugin-pky-${project.version}</finalName>
+        <finalName>mbg-plugin-pky</finalName>
     </build>
 </project>

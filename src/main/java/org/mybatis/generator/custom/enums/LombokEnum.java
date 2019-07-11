@@ -1,8 +1,8 @@
-package org.mybatis.generator.enums;
+package org.mybatis.generator.custom.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.mybatis.generator.interfaze.EnumInterface;
+import org.mybatis.generator.custom.interfaze.EnumInterface;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,7 +18,7 @@ public enum LombokEnum implements EnumInterface {
     DATA("@Data", "lombok.Data"),
     SETTER("@Setter", "lombok.Setter"),
     GETTER("@Getter", "lombok.Getter"),
-    Builder("@Builder", "lombok.Builder"),
+    BUILDER("@Builder", "lombok.Builder"),
     ACCESSORS("@Accessors(chain = true)", "lombok.experimental.Accessors"),
     NO_ARGS_CONSTRUCTOR("@NoArgsConstructor", "lombok.NoArgsConstructor"),
     ALL_ARGS_CONSTRUCTOR("@AllArgsConstructor", "lombok.AllArgsConstructor"),
@@ -34,5 +34,8 @@ public enum LombokEnum implements EnumInterface {
         lombokEnumMap = new HashMap<>(enums.length);
         for (LombokEnum lombokEnum : enums)
             lombokEnumMap.put(lombokEnum.annotation, lombokEnum.pkg);
+    }
+    public static Map<String, String> getLombokEnumMap(){
+        return lombokEnumMap;
     }
 }
