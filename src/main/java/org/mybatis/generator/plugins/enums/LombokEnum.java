@@ -1,8 +1,8 @@
-package org.mybatis.generator.custom.enums;
+package org.mybatis.generator.plugins.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.mybatis.generator.custom.interfaze.EnumInterface;
+import org.mybatis.generator.plugins.interfaze.EnumInterface;
 
 import java.util.HashMap;
 import java.util.Map;

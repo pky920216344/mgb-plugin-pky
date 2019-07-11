@@ -1,4 +1,4 @@
-package org.mybatis.generator.custom.plugins;
+package org.mybatis.generator.plugins.custom;
 
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
@@ -10,14 +10,14 @@ import org.mybatis.generator.api.dom.java.Method;
 import org.mybatis.generator.api.dom.java.TopLevelClass;
 import org.mybatis.generator.api.dom.xml.Document;
 import org.mybatis.generator.config.JavaClientGeneratorConfiguration;
-import org.mybatis.generator.custom.enums.LombokEnum;
-import org.mybatis.generator.custom.interfaze.EnumInterface;
+import org.mybatis.generator.plugins.enums.LombokEnum;
+import org.mybatis.generator.plugins.interfaze.EnumInterface;
 
 import java.util.List;
 import java.util.Properties;
 
 
-public class PkyPlugin extends PluginAdapter {
+public class CustomPlugin extends PluginAdapter {
 
     private String customLombok;
     private String lombokPackage;

@@ -1,4 +1,4 @@
-package org.mybatis.generator.custom.interfaze;
+package org.mybatis.generator.plugins.interfaze;
 
 /**
  * @author Administrator
