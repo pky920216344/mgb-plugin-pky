@@ -78,7 +78,6 @@ public class CustomPlugin extends PluginAdapter {
                     FullyQualifiedJavaType iterableType = new FullyQualifiedJavaType("java.util.Collection");
                     iterableType.addTypeArgument(introspectedTable.getRules().calculateAllFieldsClass());
                     method.addParameter(new Parameter(iterableType, "collection"));
-                    interfaze.addImportedType(iterableType);
 
                     FullyQualifiedJavaType arrayListType = new FullyQualifiedJavaType("java.util.ArrayList");
                     interfaze.addImportedType(arrayListType);
