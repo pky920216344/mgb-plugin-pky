@@ -95,7 +95,7 @@ public class CustomPlugin extends PluginAdapter {
                                 + "\")");
                     }
                     method.addBodyLine("        .build().render(RenderingStrategy.MYBATIS3)");
-                    method.addBodyLine("         .insertStatements().forEach(this::insert);");
+                    method.addBodyLine("        .insertStatements().forEach(this::insert);");
                     method.addBodyLine("return collection.size();");
                     interfaze.addMethod(method);
                     break;
