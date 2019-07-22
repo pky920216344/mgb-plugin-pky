@@ -83,7 +83,7 @@ public class CustomPlugin extends PluginAdapter {
                     interfaze.addImportedType(arrayListType);
 
                     String tableFieldName = JavaBeansUtil.getValidPropertyName(introspectedTable.getFullyQualifiedTable().getDomainObjectName());
-                    method.addBodyLine("return SqlBuilder.insert(new ArrayList<>(collection)).into(" + tableFieldName + ")");
+                    method.addBodyLine("SqlBuilder.insert(new ArrayList<>(collection)).into(" + tableFieldName + ")");
                     List<IntrospectedColumn> columns = ListUtilities.removeIdentityAndGeneratedAlwaysColumns(introspectedTable.getAllColumns());
                     for (IntrospectedColumn column : columns) {
                         String fieldName = column.getJavaProperty();
@@ -95,7 +95,8 @@ public class CustomPlugin extends PluginAdapter {
                                 + "\")");
                     }
                     method.addBodyLine("        .build().render(RenderingStrategy.MYBATIS3)");
-                    method.addBodyLine("        .insertStatements().stream().map(this::insert).count();");
+                    method.addBodyLine("         .insertStatements().forEach(this::insert);");
+                    method.addBodyLine("return collection.size();");
                     interfaze.addMethod(method);
                     break;
                 default:
