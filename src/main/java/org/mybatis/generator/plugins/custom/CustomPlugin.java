@@ -119,12 +119,12 @@ public class CustomPlugin extends PluginAdapter {
 
         field.addJavaDocLine("/**"); //$NON-NLS-1$
         String columnRemarks = introspectedColumn.getRemarks();
-        StringBuilder remarks = new StringBuilder(" * 【").append(null == columnRemarks ? "无描述" : columnRemarks.replaceAll("(\r\n|\n|\r|\")", " "));
+        StringBuilder remarks = new StringBuilder(" * 【").append(null == columnRemarks ? "no mark" : columnRemarks.replaceAll("(\r\n|\n|\r|\")", " "));
         String columnName = introspectedColumn.getActualColumnName();
         List<IntrospectedColumn> primaryKey = introspectedTable.getPrimaryKeyColumns();
         for (IntrospectedColumn pk : primaryKey) {
             if (columnName.equals(pk.getActualColumnName())) {
-                remarks.append("Primary key");
+                remarks.append(" [Primary key] ");
                 continue;
             }
             remarks.append(introspectedColumn.isNullable() ? "(can be null)" : "(not be null)");
