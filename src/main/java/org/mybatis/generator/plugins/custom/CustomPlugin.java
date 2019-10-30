@@ -118,21 +118,22 @@ public class CustomPlugin extends PluginAdapter {
     private void addFieldComment(Field field, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable) {
 
         field.addJavaDocLine("/**"); //$NON-NLS-1$
-        StringBuilder remarks = new StringBuilder(" * 【").append(introspectedColumn.getRemarks().replaceAll("(\r\n|\n|\r|\")", " "));
+        String columnRemarks = introspectedColumn.getRemarks();
+        StringBuilder remarks = new StringBuilder(" * 【").append(null == columnRemarks ? "无描述" : columnRemarks.replaceAll("(\r\n|\n|\r|\")", " "));
         String columnName = introspectedColumn.getActualColumnName();
         List<IntrospectedColumn> primaryKey = introspectedTable.getPrimaryKeyColumns();
         for (IntrospectedColumn pk : primaryKey) {
             if (columnName.equals(pk.getActualColumnName())) {
-                remarks.append(" (主健ID)");
+                remarks.append("Primary key");
                 continue;
             }
-            remarks.append(introspectedColumn.isNullable() ? "(可选项)" : "(必填项)");
+            remarks.append(introspectedColumn.isNullable() ? "(can be null)" : "(not be null)");
         }
         String defaultValue = introspectedColumn.getDefaultValue();
         if (null == defaultValue) {
-            remarks.append(" (无默认值)");
+            remarks.append(" (no default value)");
         } else {
-            remarks.append("  (默认值为: ");
+            remarks.append("  (default value: ");
             remarks.append(defaultValue);
             remarks.append(")");
         }
