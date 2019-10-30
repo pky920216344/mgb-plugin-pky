@@ -48,6 +48,7 @@
                         <descriptor>src/main/assembly/srcZip.xml</descriptor>
                     </descriptors>
                     <finalName>mbg-plugin-pky-${project.version}</finalName>
+                    <!-- https://stackoverflow.com/questions/33819438/maven-assembly-plugin-group-id-1377585961-is-too-big-error  -->
                     <tarLongFileMode>posix</tarLongFileMode>
                 </configuration>
                 <executions>
