@@ -52,28 +52,27 @@ public class CustomPlugin extends PluginAdapter {
      *
      */
     @Override
-    public boolean clientGenerated(Interface interfaze, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+    public boolean clientGenerated(Interface interfaze,  IntrospectedTable introspectedTable) {
         // add insertBatch
-        addInsertBatch(interfaze, topLevelClass, introspectedTable);
+        addInsertBatch(interfaze, introspectedTable);
         // add insertMulti
-        addInsertMulti(interfaze, topLevelClass, introspectedTable);
-        return super.clientGenerated(interfaze, topLevelClass, introspectedTable);
+        addInsertMulti(interfaze, introspectedTable);
+        return super.clientGenerated(interfaze, introspectedTable);
     }
 
-    private void addInsertMulti(Interface interfaze, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+    private void addInsertMulti(Interface interfaze, IntrospectedTable introspectedTable) {
 
     }
 
-    private void addInsertBatch(Interface interfaze, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+    private void addInsertBatch(Interface interfaze, IntrospectedTable introspectedTable) {
         if (enableInsertBatch()) {
             switch (introspectedTable.getTargetRuntime()) {
                 case MYBATIS3:
                     break;
                 case MYBATIS3_DSQL:
-                    Method method = new Method();
+                    Method method = new Method("insertBatch");
                     method.setDefault(true);
                     method.setReturnType(new FullyQualifiedJavaType("long"));
-                    method.setName("insertBatch");
                     //参数
                     FullyQualifiedJavaType iterableType = new FullyQualifiedJavaType("java.util.Collection");
                     iterableType.addTypeArgument(introspectedTable.getRules().calculateAllFieldsClass());
@@ -241,7 +240,6 @@ public class CustomPlugin extends PluginAdapter {
     /**
      * XML file add insertMulti
      * {{@link IntrospectedTable.TargetRuntime#MYBATIS3_DSQL}} do not add  这个没有XML文件不需要添加
-     * {{@link IntrospectedTable.TargetRuntime#IBATIS2}} i don't know,  i haven't used it  这个没用过不知道
      * {{@link IntrospectedTable.TargetRuntime#MYBATIS3}} when
      */
     private void addInsertMultiXMLMapper(Document document,
