@@ -6,9 +6,6 @@ import org.mybatis.generator.api.Plugin;
 import org.mybatis.generator.api.PluginAdapter;
 import org.mybatis.generator.api.dom.java.*;
 import org.mybatis.generator.api.dom.xml.Document;
-import org.mybatis.generator.codegen.mybatis3.ListUtilities;
-import org.mybatis.generator.config.JavaClientGeneratorConfiguration;
-import org.mybatis.generator.internal.util.JavaBeansUtil;
 import org.mybatis.generator.plugins.enums.LombokEnum;
 import org.mybatis.generator.plugins.interfaze.EnumInterface;
 
@@ -17,12 +14,17 @@ import java.util.*;
 
 public class CustomPlugin extends PluginAdapter {
 
+    private static final String CUSTOM_LOMBOK_PROPERTY = "customLombok";
+    private static final String LOMBOK_PACKAGE_PROPERTY = "lombokPackage";
+    private static final String ENABLE_SWAGGER_PROPERTY = "enableSwagger";
+    private static final String CUSTOM_SUPER_MAPPER_PROPERTY = "customSuperMapper";
+
     private String customLombok;
     private String lombokPackage;
     private String needSwagger;
-    private String needInsertBatch;
-    private String needInsertMulti;
-    private Map<String, String> lombokEnumMap;
+    private String customSuperMapper;
+    private final Map<String, String> lombokEnumMap;
+
 
     public CustomPlugin() {
         LombokEnum[] enums = LombokEnum.values();
@@ -35,11 +37,10 @@ public class CustomPlugin extends PluginAdapter {
     public void setProperties(Properties properties) {
         super.setProperties(properties);
 
-        customLombok = properties.getProperty("customLombok");
-        lombokPackage = properties.getProperty("lombokPackage");
-        needSwagger = properties.getProperty("enableSwagger");
-        needInsertBatch = properties.getProperty("needInsertBatch");
-        needInsertMulti = properties.getProperty("needInsertMulti");
+        customLombok = properties.getProperty(CUSTOM_LOMBOK_PROPERTY);
+        lombokPackage = properties.getProperty(LOMBOK_PACKAGE_PROPERTY);
+        needSwagger = properties.getProperty(ENABLE_SWAGGER_PROPERTY);
+        customSuperMapper = properties.getProperty(CUSTOM_SUPER_MAPPER_PROPERTY);
     }
 
 
@@ -52,56 +53,9 @@ public class CustomPlugin extends PluginAdapter {
      *
      */
     @Override
-    public boolean clientGenerated(Interface interfaze,  IntrospectedTable introspectedTable) {
-        // add insertBatch
-        addInsertBatch(interfaze, introspectedTable);
-        // add insertMulti
-        addInsertMulti(interfaze, introspectedTable);
+    public boolean clientGenerated(Interface interfaze, IntrospectedTable introspectedTable) {
+        addSuperMapper(interfaze, introspectedTable);
         return super.clientGenerated(interfaze, introspectedTable);
-    }
-
-    private void addInsertMulti(Interface interfaze, IntrospectedTable introspectedTable) {
-
-    }
-
-    private void addInsertBatch(Interface interfaze, IntrospectedTable introspectedTable) {
-        if (enableInsertBatch()) {
-            switch (introspectedTable.getTargetRuntime()) {
-                case MYBATIS3:
-                    break;
-                case MYBATIS3_DSQL:
-                    Method method = new Method("insertBatch");
-                    method.setDefault(true);
-                    method.setReturnType(new FullyQualifiedJavaType("long"));
-                    //参数
-                    FullyQualifiedJavaType iterableType = new FullyQualifiedJavaType("java.util.Collection");
-                    iterableType.addTypeArgument(introspectedTable.getRules().calculateAllFieldsClass());
-                    method.addParameter(new Parameter(iterableType, "collection"));
-
-                    FullyQualifiedJavaType arrayListType = new FullyQualifiedJavaType("java.util.ArrayList");
-                    interfaze.addImportedType(arrayListType);
-
-                    String tableFieldName = JavaBeansUtil.getValidPropertyName(introspectedTable.getFullyQualifiedTable().getDomainObjectName());
-                    method.addBodyLine("SqlBuilder.insert(new ArrayList<>(collection)).into(" + tableFieldName + ")");
-                    List<IntrospectedColumn> columns = ListUtilities.removeIdentityAndGeneratedAlwaysColumns(introspectedTable.getAllColumns());
-                    for (IntrospectedColumn column : columns) {
-                        String fieldName = column.getJavaProperty();
-                        if (fieldName.equals(tableFieldName)) {
-                            fieldName = tableFieldName + "." + fieldName;
-                        }
-                        method.addBodyLine("        .map(" + fieldName
-                                + ").toProperty(\"" + column.getJavaProperty()
-                                + "\")");
-                    }
-                    method.addBodyLine("        .build().render(RenderingStrategy.MYBATIS3)");
-                    method.addBodyLine("        .insertStatements().forEach(this::insert);");
-                    method.addBodyLine("return collection.size();");
-                    interfaze.addMethod(method);
-                    break;
-                default:
-                    //do nothing
-            }
-        }
     }
 
 
@@ -117,10 +71,10 @@ public class CustomPlugin extends PluginAdapter {
     private void addFieldComment(Field field, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable) {
 
         field.addJavaDocLine("/**"); //$NON-NLS-1$
-        String columnRemarks = introspectedColumn.getRemarks();
-        StringBuilder remarks = new StringBuilder(" * 【").append(null == columnRemarks ? "no mark" : columnRemarks.replaceAll("(\r\n|\n|\r|\")", " "));
-        String columnName = introspectedColumn.getActualColumnName();
-        List<IntrospectedColumn> primaryKey = introspectedTable.getPrimaryKeyColumns();
+        var columnRemarks = introspectedColumn.getRemarks();
+        var remarks = new StringBuilder(" * 【").append(null == columnRemarks ? "no mark" : columnRemarks.replaceAll("(\r\n|\n|\r|\")", " "));
+        var columnName = introspectedColumn.getActualColumnName();
+        var primaryKey = introspectedTable.getPrimaryKeyColumns();
         for (IntrospectedColumn pk : primaryKey) {
             if (columnName.equals(pk.getActualColumnName())) {
                 remarks.append(" [Primary key] ");
@@ -128,7 +82,7 @@ public class CustomPlugin extends PluginAdapter {
             }
             remarks.append(introspectedColumn.isNullable() ? "(can be null)" : "(not be null)");
         }
-        String defaultValue = introspectedColumn.getDefaultValue();
+        var defaultValue = introspectedColumn.getDefaultValue();
         if (null == defaultValue) {
             remarks.append(" (no default value)");
         } else {
@@ -149,7 +103,7 @@ public class CustomPlugin extends PluginAdapter {
     @Override
     public boolean sqlMapDocumentGenerated(Document document,
                                            IntrospectedTable introspectedTable) {
-        addInsertMultiXMLMapper(document, introspectedTable);
+
         return super.sqlMapDocumentGenerated(document, introspectedTable);
     }
 
@@ -200,7 +154,7 @@ public class CustomPlugin extends PluginAdapter {
     }
 
     /**
-     * Whether  Use  Lombok
+     * Whether you  use  Lombok
      * 是否使用Lombok
      */
     private boolean enableLombok() {
@@ -208,7 +162,7 @@ public class CustomPlugin extends PluginAdapter {
     }
 
     /**
-     * Whether  Use  Swagger
+     * Whether you  use  Swagger
      * 是否使用Swagger
      */
     private boolean enableSwagger() {
@@ -216,48 +170,11 @@ public class CustomPlugin extends PluginAdapter {
     }
 
     /**
-     * Whether  Use  insertBatch(notes: different with insertMulti)
-     * 是否开启批量新增
-     * like this:
-     * for(T t: collection){
-     * xxxMapper.insertSelective(t);
-     * }
+     * Whether you  use  super-mapper
+     * 是否使用Swagger
      */
-    private boolean enableInsertBatch() {
-        return Boolean.TRUE.toString().equalsIgnoreCase(needInsertBatch);
-    }
-
-    /**
-     * Whether  Use  insertMulti
-     * 是否开启多条新增
-     * like this:
-     * INSERT INTO table VALUES (t1),(t2),(t3),(t4)
-     */
-    private boolean enableInsertMulti() {
-        return Boolean.TRUE.toString().equalsIgnoreCase(needInsertMulti);
-    }
-
-    /**
-     * XML file add insertMulti
-     * {{@link IntrospectedTable.TargetRuntime#MYBATIS3_DSQL}} do not add  这个没有XML文件不需要添加
-     * {{@link IntrospectedTable.TargetRuntime#MYBATIS3}} when
-     */
-    private void addInsertMultiXMLMapper(Document document,
-                                         IntrospectedTable introspectedTable) {
-        IntrospectedTable.TargetRuntime runtime = introspectedTable.getTargetRuntime();
-        switch (runtime) {
-            case MYBATIS3:
-                JavaClientGeneratorConfiguration javaClientGeneratorConfiguration;
-                if (null == (javaClientGeneratorConfiguration = context.getJavaClientGeneratorConfiguration()))
-                    break;
-                String type = javaClientGeneratorConfiguration.getConfigurationType();
-                if ("XMLMAPPER".equalsIgnoreCase(type)) {
-
-                }
-                break;
-            default:
-                //do nothing
-        }
+    private boolean enableSuperMapper() {
+        return !(customSuperMapper == null || customSuperMapper.length() == 0);
     }
 
 
@@ -266,9 +183,9 @@ public class CustomPlugin extends PluginAdapter {
      */
     private void addLombokToTopLevelClass(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         if (enableLombok()) {
-            String[] customLombokAnnotations = customLombok.split(",");
+            var customLombokAnnotations = customLombok.split(",");
             if (null == lombokPackage || lombokPackage.length() == 0) {
-                for (String annotation : customLombokAnnotations) {
+                for (var annotation : customLombokAnnotations) {
                     String pkg;
                     if (null == (pkg = lombokEnumMap.get(annotation))) {
                         topLevelClass.getAnnotations().add(annotation);
@@ -279,7 +196,7 @@ public class CustomPlugin extends PluginAdapter {
                     }
                 }
             } else {
-                String[] lombokPackages = lombokPackage.split(",");
+                var lombokPackages = lombokPackage.split(",");
                 for (int i = 0; i < customLombokAnnotations.length; i++) {
                     topLevelClass.getAnnotations().add(customLombokAnnotations[i]);
                     topLevelClass.addImportedType(lombokPackages[i]);
@@ -298,7 +215,7 @@ public class CustomPlugin extends PluginAdapter {
     private void addSwaggerToTopLevelClass(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         //Swagger
         if (enableSwagger()) {
-            Set<FullyQualifiedJavaType> set = new HashSet<>();
+            var set = new HashSet<FullyQualifiedJavaType>();
             set.add(new FullyQualifiedJavaType("io.swagger.annotations.ApiModel"));
             topLevelClass.addImportedTypes(set);
             topLevelClass.getAnnotations().add("@ApiModel(description = \"" + introspectedTable.getFullyQualifiedTable().getDomainObjectName() + "\")");
@@ -310,6 +227,20 @@ public class CustomPlugin extends PluginAdapter {
         for (EnumInterface enumInterface : enumInterfaces) {
             topLevelClass.getAnnotations().add(enumInterface.getAnnotation());
             topLevelClass.addImportedType(enumInterface.getPkg());
+        }
+    }
+
+    private void addSuperMapper(Interface interfaze, IntrospectedTable introspectedTable) {
+        if (enableSuperMapper()) {
+
+            var baseType = new FullyQualifiedJavaType(customSuperMapper);
+
+            var superType = new FullyQualifiedJavaType(baseType.getShortName());
+            superType.addTypeArgument(introspectedTable.getPrimaryKeyColumns().get(0).getFullyQualifiedJavaType());
+            superType.addTypeArgument(new FullyQualifiedJavaType(introspectedTable.getBaseRecordType()));
+            interfaze.addSuperInterface(superType);
+
+            interfaze.addImportedType(baseType);
         }
     }
 
