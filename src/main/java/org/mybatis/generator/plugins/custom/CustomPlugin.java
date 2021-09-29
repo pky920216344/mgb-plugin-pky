@@ -10,6 +10,8 @@ import org.mybatis.generator.plugins.enums.LombokEnum;
 import org.mybatis.generator.plugins.interfaze.EnumInterface;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class CustomPlugin extends PluginAdapter {
@@ -18,29 +20,24 @@ public class CustomPlugin extends PluginAdapter {
     private static final String LOMBOK_PACKAGE_PROPERTY = "lombokPackage";
     private static final String ENABLE_SWAGGER_PROPERTY = "enableSwagger";
     private static final String CUSTOM_SUPER_MAPPER_PROPERTY = "customSuperMapper";
+    private static final String CUSTOM_SUPER_ENTITY_PROPERTY = "customSuperEntity";
 
     private String customLombok;
     private String lombokPackage;
     private String needSwagger;
     private String customSuperMapper;
-    private final Map<String, String> lombokEnumMap;
+    private String customSuperEntity;
+    private final Map<String, String> lombokEnumMap = Stream.of(LombokEnum.values()).collect(Collectors.toMap(LombokEnum::getAnnotation, LombokEnum::getPkg));
 
-
-    public CustomPlugin() {
-        LombokEnum[] enums = LombokEnum.values();
-        lombokEnumMap = new HashMap<>(enums.length);
-        for (LombokEnum lombokEnum : enums)
-            lombokEnumMap.put(lombokEnum.getAnnotation(), lombokEnum.getPkg());
-    }
 
     @Override
     public void setProperties(Properties properties) {
         super.setProperties(properties);
-
         customLombok = properties.getProperty(CUSTOM_LOMBOK_PROPERTY);
         lombokPackage = properties.getProperty(LOMBOK_PACKAGE_PROPERTY);
         needSwagger = properties.getProperty(ENABLE_SWAGGER_PROPERTY);
         customSuperMapper = properties.getProperty(CUSTOM_SUPER_MAPPER_PROPERTY);
+        customSuperEntity = properties.getProperty(CUSTOM_SUPER_ENTITY_PROPERTY);
     }
 
 
@@ -49,9 +46,6 @@ public class CustomPlugin extends PluginAdapter {
     }
 
 
-    /**
-     *
-     */
     @Override
     public boolean clientGenerated(Interface interfaze, IntrospectedTable introspectedTable) {
         addSuperMapper(interfaze, introspectedTable);
@@ -113,7 +107,20 @@ public class CustomPlugin extends PluginAdapter {
         addLombokToTopLevelClass(topLevelClass, introspectedTable);
         //add Swagger
         addSwaggerToTopLevelClass(topLevelClass, introspectedTable);
+        //add super entity
+        addSuperEntity(topLevelClass, introspectedTable);
         return super.modelBaseRecordClassGenerated(topLevelClass, introspectedTable);
+    }
+
+    private void addSuperEntity(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        if (enableSuperEntity()) {
+            var baseClass = new FullyQualifiedJavaType(customSuperEntity);
+            topLevelClass.addImportedType(baseClass);
+
+            var superType = new FullyQualifiedJavaType(baseClass.getShortName());
+            superType.addTypeArgument(new FullyQualifiedJavaType(introspectedTable.getBaseRecordType()));
+            topLevelClass.addSuperInterface(superType);
+        }
     }
 
 
@@ -171,10 +178,18 @@ public class CustomPlugin extends PluginAdapter {
 
     /**
      * Whether you  use  super-mapper
-     * 是否使用Swagger
+     * 是否使用SuperMapper
      */
     private boolean enableSuperMapper() {
         return !(customSuperMapper == null || customSuperMapper.length() == 0);
+    }
+
+    /**
+     * Whether you  use  super-entity
+     * 是否使用SuperEntity
+     */
+    private boolean enableSuperEntity() {
+        return !(customSuperEntity == null || customSuperEntity.length() == 0);
     }
 
 
