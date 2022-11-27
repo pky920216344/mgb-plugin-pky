@@ -48,8 +48,86 @@ public class CustomPlugin extends PluginAdapter {
 
     @Override
     public boolean clientGenerated(Interface interfaze, IntrospectedTable introspectedTable) {
+        // add super mapper
         addSuperMapper(interfaze, introspectedTable);
+        // add more method in mapper
+        addGetColumnsMethod(interfaze, introspectedTable);
+
+        removeGeneratedAnnotation(interfaze);
         return super.clientGenerated(interfaze, introspectedTable);
+    }
+
+    private void addGetColumnsMethod(Interface interfaze, IntrospectedTable introspectedTable) {
+        var returnType = new FullyQualifiedJavaType("UpdateDSL");
+        returnType.addTypeArgument(new FullyQualifiedJavaType("UpdateModel"));
+        var parameter = new Parameter(new FullyQualifiedJavaType(introspectedTable.getBaseRecordType()), "record");
+        var tableName = getTableField(introspectedTable.getFullyQualifiedTable().getDomainObjectName());
+
+        var updateAllColumnsMethod = new Method("updateAllColumns");
+        updateAllColumnsMethod.setDefault(true);
+        updateAllColumnsMethod.setReturnType(returnType);
+        updateAllColumnsMethod.addParameter(parameter);
+        updateAllColumnsMethod.addBodyLine("return updateAllColumns(record, UpdateDSL.update(" + tableName + "));");
+        interfaze.addMethod(updateAllColumnsMethod);
+
+        var updateSelectiveColumnsMethod = new Method("updateSelectiveColumns");
+        updateSelectiveColumnsMethod.setDefault(true);
+        updateSelectiveColumnsMethod.setReturnType(returnType);
+        updateSelectiveColumnsMethod.addParameter(parameter);
+        updateSelectiveColumnsMethod.addBodyLine("return updateSelectiveColumns(record, UpdateDSL.update(" + tableName + "));");
+        interfaze.addMethod(updateSelectiveColumnsMethod);
+
+        //org.mybatis.dynamic.sql.SqlTable
+        var getSqlTableMethod = new Method("getSqlTable");
+        getSqlTableMethod.setDefault(true);
+        var sqlTableType = new FullyQualifiedJavaType("SqlTable");
+        getSqlTableMethod.setReturnType(sqlTableType);
+        getSqlTableMethod.addBodyLine("return " + tableName + ";");
+        interfaze.addMethod(getSqlTableMethod);
+        interfaze.addImportedType(new FullyQualifiedJavaType("org.mybatis.dynamic.sql.SqlTable"));
+
+    }
+
+    private void removeGeneratedAnnotation(AbstractJavaType javaType) {
+        if (javaType instanceof CompilationUnit) {
+            var importedTypes = ((CompilationUnit) javaType).getImportedTypes();
+            for (var importType : importedTypes) {
+                if ("Generated".equals(importType.getShortName())) {
+                    importedTypes.remove(importType);
+                    break;
+                }
+            }
+        }
+        removeGeneratedAnnotationFromJavaElement(javaType.getMethods());
+        removeGeneratedAnnotationFromJavaElement(javaType.getFields());
+        removeGeneratedAnnotationFromJavaElement(javaType.getInnerClasses());
+        removeGeneratedAnnotationFromJavaElement(javaType.getInnerEnums());
+    }
+
+    private void removeGeneratedAnnotationFromJavaElement(Collection<? extends JavaElement> collection) {
+        if (null == collection || collection.isEmpty()) {
+            return;
+        }
+        for (var element : collection) {
+            var annotations = element.getAnnotations();
+            for (var annotation : annotations) {
+                if (annotation.contains("Generated")) {
+                    annotations.remove(annotation);
+                    break;
+                }
+            }
+        }
+    }
+
+    private String getTableField(String tableName) {
+        var chars = tableName.toCharArray();
+        var first = chars[0];
+        if ('A' <= first && 'Z' >= first) {
+            first ^= 'a' - 'A';
+            chars[0] = first;
+            return String.valueOf(chars);
+        }
+        return tableName;
     }
 
 
@@ -66,25 +144,9 @@ public class CustomPlugin extends PluginAdapter {
 
         field.addJavaDocLine("/**"); //$NON-NLS-1$
         var columnRemarks = introspectedColumn.getRemarks();
-        var remarks = new StringBuilder(" * 【").append(null == columnRemarks ? "no mark" : columnRemarks.replaceAll("(\r\n|\n|\r|\")", " "));
-        var columnName = introspectedColumn.getActualColumnName();
-        var primaryKey = introspectedTable.getPrimaryKeyColumns();
-        for (IntrospectedColumn pk : primaryKey) {
-            if (columnName.equals(pk.getActualColumnName())) {
-                remarks.append(" [Primary key] ");
-                continue;
-            }
-            remarks.append(introspectedColumn.isNullable() ? "(can be null)" : "(not be null)");
-        }
-        var defaultValue = introspectedColumn.getDefaultValue();
-        if (null == defaultValue) {
-            remarks.append(" (no default value)");
-        } else {
-            remarks.append("  (default value: ");
-            remarks.append(defaultValue);
-            remarks.append(")");
-        }
-        remarks.append(" 】");
+        var remarks = new StringBuilder(" * 【 ")
+                .append(null == columnRemarks ? "no mark" : columnRemarks.replaceAll("(\r\n|\n|\r|\")", " "))
+                .append(" 】");
         field.addJavaDocLine(remarks.toString());
         field.addJavaDocLine(" */");
         if (enableSwagger()) {
@@ -109,6 +171,8 @@ public class CustomPlugin extends PluginAdapter {
         addSwaggerToTopLevelClass(topLevelClass, introspectedTable);
         //add super entity
         addSuperEntity(topLevelClass, introspectedTable);
+
+        removeGeneratedAnnotation(topLevelClass);
         return super.modelBaseRecordClassGenerated(topLevelClass, introspectedTable);
     }
 
@@ -118,9 +182,16 @@ public class CustomPlugin extends PluginAdapter {
             topLevelClass.addImportedType(baseClass);
 
             var superType = new FullyQualifiedJavaType(baseClass.getShortName());
+            superType.addTypeArgument(introspectedTable.getPrimaryKeyColumns().get(0).getFullyQualifiedJavaType());
             superType.addTypeArgument(new FullyQualifiedJavaType(introspectedTable.getBaseRecordType()));
             topLevelClass.addSuperInterface(superType);
         }
+    }
+
+    @Override
+    public boolean dynamicSqlSupportGenerated(TopLevelClass supportClass, IntrospectedTable introspectedTable) {
+        removeGeneratedAnnotation(supportClass);
+        return super.dynamicSqlSupportGenerated(supportClass, introspectedTable);
     }
 
 
