@@ -13,11 +13,14 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>11</java.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <mybatis.generator.maven.plugin.version>1.4.1</mybatis.generator.maven.plugin.version>
-        <lombok.version>1.18.24</lombok.version>
+
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+
+        <maven-assembly-plugin.version>3.6.0</maven-assembly-plugin.version>
+        <mybatis.generator.maven.plugin.version>1.4.2</mybatis.generator.maven.plugin.version>
+        <lombok.version>1.18.28</lombok.version>
     </properties>
 
     <dependencies>
@@ -40,7 +43,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>${maven-assembly-plugin.version}</version>
                 <configuration>
                     <descriptors>
                         <descriptor>src/main/assembly/binZip.xml

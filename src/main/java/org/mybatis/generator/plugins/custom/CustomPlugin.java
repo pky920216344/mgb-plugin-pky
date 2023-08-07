@@ -91,12 +91,7 @@ public class CustomPlugin extends PluginAdapter {
     private void removeGeneratedAnnotation(AbstractJavaType javaType) {
         if (javaType instanceof CompilationUnit) {
             var importedTypes = ((CompilationUnit) javaType).getImportedTypes();
-            for (var importType : importedTypes) {
-                if ("Generated".equals(importType.getShortName())) {
-                    importedTypes.remove(importType);
-                    break;
-                }
-            }
+            importedTypes.removeIf(importType -> "Generated".equals(importType.getShortName()));
         }
         removeGeneratedAnnotationFromJavaElement(javaType.getMethods());
         removeGeneratedAnnotationFromJavaElement(javaType.getFields());
